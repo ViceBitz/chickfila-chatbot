@@ -1,0 +1,1 @@
+Link I'm using to make the chatbot: https://kirweb.site/blog/rag-chatbot-django-openai/
