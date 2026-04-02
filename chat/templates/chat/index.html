@@ -1,0 +1,110 @@
+{% extends 'base.html' %}
+
+{% block content %}
+  <div class="chat-wrapper">
+    <div id="messages">
+      <div class="welcome">
+        <p>
+          Welcome! I am your <strong>Chick-fil-A</strong> assistant.
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <div class="input-area">
+    <div class="input-row">
+      <textarea id="user-input" rows="1" placeholder="Ask about the menu, locations, etc."></textarea>
+      <button id="send" aria-label="Send">
+        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+          <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z" />
+        </svg>
+      </button>
+    </div>
+  </div>
+{% endblock %}
+
+{% block extra_scripts %}
+  <script>
+    const messagesEl = document.getElementById("messages")
+    const inputEl = document.getElementById("user-input")
+    const sendBtn = document.getElementById("send")
+
+    function now() {
+      return new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+    }
+
+    function appendMessage(role, text, loading = false) {
+      const welcome = messagesEl.querySelector(".welcome")
+      if (welcome) welcome.remove()
+
+      const wrapper = document.createElement("div")
+      wrapper.className = `message ${role}`
+
+      const bubble = document.createElement("div")
+      bubble.className = "bubble" + (loading ? " loading" : "")
+      bubble.textContent = text
+
+      const ts = document.createElement("span")
+      ts.className = "timestamp"
+      ts.textContent = now()
+
+      wrapper.appendChild(bubble)
+      wrapper.appendChild(ts)
+      messagesEl.appendChild(wrapper)
+      messagesEl.scrollTop = messagesEl.scrollHeight
+      return bubble
+    }
+
+    async function sendMessage() {
+      const query = inputEl.value.trim()
+      if (!query) return
+
+      inputEl.value = ""
+      inputEl.style.height = "auto"
+      sendBtn.disabled = true
+
+      appendMessage("user", query)
+      const thinkingBubble = appendMessage("bot", "Thinking…", true)
+
+      try {
+        const res = await fetch("/api/chat/query/", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ query })
+        })
+
+        const data = await res.json()
+
+        if (res.ok) {
+          thinkingBubble.textContent = data.answer
+          thinkingBubble.classList.remove("loading")
+        } else {
+          thinkingBubble.textContent = data.error || "Something went wrong. Please try again later."
+          thinkingBubble.classList.remove("loading")
+          thinkingBubble.style.color = "#c0392b"
+        }
+      } catch {
+        thinkingBubble.textContent = "Server issues. Please try again later."
+        thinkingBubble.classList.remove("loading")
+        thinkingBubble.style.color = "#c0392b"
+      }
+
+      sendBtn.disabled = false
+      inputEl.focus()
+    }
+
+    inputEl.addEventListener("input", () => {
+      inputEl.style.height = "auto"
+      inputEl.style.height = inputEl.scrollHeight + "px"
+    })
+
+    inputEl.addEventListener("keydown", (e) => {
+      if (e.key === "Enter" && !e.shiftKey) {
+        e.preventDefault()
+        sendMessage()
+      }
+    })
+
+    sendBtn.addEventListener("click", sendMessage)
+  </script>
+{% endblock %}

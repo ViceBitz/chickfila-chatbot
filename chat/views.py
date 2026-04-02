@@ -1,16 +1,19 @@
 import os
 import json
 from django.http import JsonResponse
+from django.shortcuts import render
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST
 from django.conf import settings
 
-from langchain.docstore.document import Document
-from langchain.text_splitter import RecursiveCharacterTextSplitter
-from langchain.vectorstores import FAISS
-from langchain.embeddings import SentenceTransformerEmbeddings
-from langchain.chat_models import ChatOpenAI
-from langchain.chains import RetrievalQA
+from langchain_core.documents import Document
+from langchain_core.prompts import ChatPromptTemplate
+from langchain_core.output_parsers import StrOutputParser
+from langchain_core.runnables import RunnablePassthrough
+from langchain_text_splitters import RecursiveCharacterTextSplitter
+from langchain_community.vectorstores import FAISS
+from langchain_community.embeddings import SentenceTransformerEmbeddings
+from langchain_openai import ChatOpenAI
 
 from .models import Conversation
 
@@ -35,11 +38,36 @@ def get_or_build_store(documents):
     return rag_store
 
 
+_PROMPT = ChatPromptTemplate.from_messages([
+    ('system', (
+        'You are a Chick-fil-A assistant. '
+        'Answer the user\'s question using only the context below. '
+        'If the answer is not in the context, say you don\'t have that information.\n\n'
+        'Context:\n{context}'
+    )),
+    ('human', '{question}'),
+])
+
+
+def _format_docs(docs):
+    return '\n\n'.join(d.page_content for d in docs)
+
+
 def create_rag_chain():
     if rag_store is None:
         raise ValueError('RAG store is empty. Please ingest documents first.')
-    llm = ChatOpenAI(model_name='gpt-4o-mini', temperature=0.0)
-    return RetrievalQA.from_chain_type(llm=llm, retriever=rag_store.as_retriever(search_kwargs={'k': 4}))
+    retriever = rag_store.as_retriever(search_kwargs={'k': 4})
+    llm = ChatOpenAI(model='gpt-4o-mini', temperature=0.0)
+    return (
+        {'context': retriever | _format_docs, 'question': RunnablePassthrough()}
+        | _PROMPT
+        | llm
+        | StrOutputParser()
+    )
+
+
+def interface(request):
+    return render(request, 'chat/index.html')
 
 
 @csrf_exempt
@@ -90,7 +118,7 @@ def query_chat(request):
 
     try:
         chain = create_rag_chain()
-        answer = chain.run(query)
+        answer = chain.invoke(query)
     except Exception as e:
         return JsonResponse({'error': str(e)}, status=500)
 
