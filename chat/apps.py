@@ -72,6 +72,29 @@ class ChatConfig(AppConfig):
 
             docs.append(Document(page_content=text, metadata={"topic": "locations"}))
 
+        # nutrition facts (second RAG source)
+        nutrition_file = Path(__file__).resolve().parent.parent / "data" / "nutrition-facts.json"
+        if nutrition_file.exists():
+            nutrition = json.loads(nutrition_file.read_text())
+            for item in nutrition:
+                name = item.get("name", "")
+                category = item.get("category", "")
+                allergens = ", ".join(item.get("allergens", [])) or "None listed"
+                text = (
+                    f"Nutrition facts for {name}."
+                    f" Category: {category}."
+                    f" Serving size: {item.get('serving_size_g', '?')}g."
+                    f" Calories: {item.get('calories_kcal', '?')} kcal."
+                    f" Total fat: {item.get('total_fat_g', '?')}g."
+                    f" Saturated fat: {item.get('saturated_fat_g', '?')}g."
+                    f" Carbohydrates: {item.get('carbohydrate_g', '?')}g."
+                    f" Sugars: {item.get('sugars_g', '?')}g."
+                    f" Protein: {item.get('protein_g', '?')}g."
+                    f" Salt: {item.get('salt_g', '?')}g."
+                    f" Allergens: {allergens}."
+                )
+                docs.append(Document(page_content=text, metadata={"topic": "nutrition"}))
+
         get_or_build_store(docs)
 
         from .views import load_location_data

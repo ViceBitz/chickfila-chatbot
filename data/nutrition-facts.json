@@ -1,0 +1,300 @@
+[
+  {
+    "name": "Cobb Salad (base only, no protein)",
+    "category": "Salads",
+    "serving_size_g": 100,
+    "calories_kcal": 224,
+    "total_fat_g": 9.4,
+    "saturated_fat_g": 2.3,
+    "carbohydrate_g": 13,
+    "sugars_g": 1.1,
+    "protein_g": 25,
+    "salt_g": 1.2,
+    "allergens": []
+  },
+  {
+    "name": "Spicy Fiesta Salad (base only, no protein)",
+    "category": "Salads",
+    "serving_size_g": 100,
+    "calories_kcal": 236,
+    "total_fat_g": 10,
+    "saturated_fat_g": 2.1,
+    "carbohydrate_g": 17,
+    "sugars_g": 1.5,
+    "protein_g": 21,
+    "salt_g": 1.1,
+    "allergens": []
+  },
+  {
+    "name": "Grilled Nuggets (protein only, default for Cobb)",
+    "category": "Salads",
+    "serving_size_g": 100,
+    "calories_kcal": 88,
+    "total_fat_g": 2.9,
+    "saturated_fat_g": 0.6,
+    "carbohydrate_g": 1.1,
+    "sugars_g": 0,
+    "protein_g": 19,
+    "salt_g": 0.15,
+    "allergens": [
+      "Milk Products"
+    ]
+  },
+  {
+    "name": "Spicy Filet (protein only, default for Spicy Fiesta)",
+    "category": "Salads",
+    "serving_size_g": 100,
+    "calories_kcal": 106,
+    "total_fat_g": 5.9,
+    "saturated_fat_g": 1.7,
+    "carbohydrate_g": 1.8,
+    "sugars_g": 0,
+    "protein_g": 20,
+    "salt_g": 1.4,
+    "allergens": [
+      "Milk Products",
+      "Gluten"
+    ]
+  },
+  {
+    "name": "Grilled Filet (protein only)",
+    "category": "Salads",
+    "serving_size_g": 100,
+    "calories_kcal": 89,
+    "total_fat_g": 3.4,
+    "saturated_fat_g": 1.1,
+    "carbohydrate_g": 1,
+    "sugars_g": 0.2,
+    "protein_g": 17,
+    "salt_g": 0.6,
+    "allergens": [
+      "Milk Products"
+    ]
+  },
+  {
+    "name": "Chick-fil-A® Filet (protein only)",
+    "category": "Salads",
+    "serving_size_g": 100,
+    "calories_kcal": 120,
+    "total_fat_g": 5.6,
+    "saturated_fat_g": 1.9,
+    "carbohydrate_g": 1.1,
+    "sugars_g": 0,
+    "protein_g": 22,
+    "salt_g": 1.65,
+    "allergens": [
+      "Milk Products",
+      "Gluten"
+    ]
+  },
+  {
+    "name": "Chick-fil-A® Nuggets (protein only)",
+    "category": "Salads",
+    "serving_size_g": 100,
+    "calories_kcal": 140,
+    "total_fat_g": 6.2,
+    "saturated_fat_g": 1.8,
+    "carbohydrate_g": 2,
+    "sugars_g": 0,
+    "protein_g": 25,
+    "salt_g": 1.1,
+    "allergens": [
+      "Milk Products",
+      "Gluten"
+    ]
+  },
+  {
+    "name": "Chick-fil-A® Waffle Potato Fries",
+    "category": "Sides",
+    "serving_size_g": 100,
+    "calories_kcal": 310,
+    "total_fat_g": 16,
+    "saturated_fat_g": 5,
+    "carbohydrate_g": 41,
+    "sugars_g": 0.7,
+    "protein_g": 4,
+    "salt_g": 0.8,
+    "allergens": []
+  },
+  {
+    "name": "Fruit Cup - Regular",
+    "category": "Sides",
+    "serving_size_g": 100,
+    "calories_kcal": 60,
+    "total_fat_g": 0.7,
+    "saturated_fat_g": 0.1,
+    "carbohydrate_g": 15,
+    "sugars_g": 9,
+    "protein_g": 1,
+    "salt_g": 0,
+    "allergens": []
+  },
+  {
+    "name": "Fruit Cup - Small",
+    "category": "Sides",
+    "serving_size_g": 100,
+    "calories_kcal": 40,
+    "total_fat_g": 0.5,
+    "saturated_fat_g": 0.1,
+    "carbohydrate_g": 10,
+    "sugars_g": 6,
+    "protein_g": 0,
+    "salt_g": 0,
+    "allergens": []
+  },
+  {
+    "name": "Side Salad",
+    "category": "Sides",
+    "serving_size_g": 100,
+    "calories_kcal": 50,
+    "total_fat_g": 3,
+    "saturated_fat_g": 0.5,
+    "carbohydrate_g": 6,
+    "sugars_g": 2,
+    "protein_g": 2,
+    "salt_g": 0.9,
+    "allergens": []
+  },
+  {
+    "name": "Chick-fil-A® Sauce",
+    "category": "Dipping Sauces,  Dressings & Toppings",
+    "serving_size_g": 28,
+    "calories_kcal": 140,
+    "total_fat_g": 9,
+    "saturated_fat_g": 1,
+    "carbohydrate_g": 15,
+    "sugars_g": 4,
+    "protein_g": 0,
+    "salt_g": 0.3,
+    "allergens": [
+      "Eggs",
+      "Milk Products",
+      "Soy"
+    ]
+  },
+  {
+    "name": "Chick-fil-A® Nuggets - 5 count",
+    "category": "Kid’s Meals",
+    "serving_size_g": 100,
+    "calories_kcal": 204,
+    "total_fat_g": 10,
+    "saturated_fat_g": 2.7,
+    "carbohydrate_g": 11,
+    "sugars_g": 0,
+    "protein_g": 23,
+    "salt_g": 0.9,
+    "allergens": [
+      "Milk Products",
+      "Gluten"
+    ]
+  },
+  {
+    "name": "Chick-fil-A® Chicken Sandwich",
+    "category": "Mains",
+    "serving_size_g": 100,
+    "calories_kcal": 225,
+    "total_fat_g": 10,
+    "saturated_fat_g": 2.5,
+    "carbohydrate_g": 30,
+    "sugars_g": 1,
+    "protein_g": 31,
+    "salt_g": 1.4,
+    "allergens": [
+      "Milk Products",
+      "Gluten"
+    ]
+  },
+  {
+    "name": "Chick-fil-A® Deluxe Sandwich",
+    "category": "Mains",
+    "serving_size_g": 100,
+    "calories_kcal": 240,
+    "total_fat_g": 11,
+    "saturated_fat_g": 3,
+    "carbohydrate_g": 31,
+    "sugars_g": 1,
+    "protein_g": 31,
+    "salt_g": 1.4,
+    "allergens": [
+      "Milk Products",
+      "Gluten"
+    ]
+  },
+  {
+    "name": "Spicy Chicken Sandwich",
+    "category": "Mains",
+    "serving_size_g": 100,
+    "calories_kcal": 240,
+    "total_fat_g": 10,
+    "saturated_fat_g": 3,
+    "carbohydrate_g": 30,
+    "sugars_g": 1,
+    "protein_g": 28,
+    "salt_g": 1.4,
+    "allergens": [
+      "Milk Products",
+      "Gluten"
+    ]
+  },
+  {
+    "name": "Chick-fil-A® Lemonade",
+    "category": "Drinks",
+    "serving_size_g": 100,
+    "calories_kcal": 50,
+    "total_fat_g": 0,
+    "saturated_fat_g": 0,
+    "carbohydrate_g": 12,
+    "sugars_g": 10,
+    "protein_g": 0,
+    "salt_g": 0,
+    "allergens": []
+  },
+  {
+    "name": "Vanilla Milkshake",
+    "category": "Treats",
+    "serving_size_g": 100,
+    "calories_kcal": 460,
+    "total_fat_g": 17,
+    "saturated_fat_g": 10,
+    "carbohydrate_g": 66,
+    "sugars_g": 57,
+    "protein_g": 9,
+    "salt_g": 0.1,
+    "allergens": [
+      "Milk Products",
+      "Gluten"
+    ]
+  },
+  {
+    "name": "Strawberry Milkshake",
+    "category": "Treats",
+    "serving_size_g": 100,
+    "calories_kcal": 440,
+    "total_fat_g": 18,
+    "saturated_fat_g": 10,
+    "carbohydrate_g": 65,
+    "sugars_g": 56,
+    "protein_g": 9,
+    "salt_g": 0.1,
+    "allergens": [
+      "Milk Products",
+      "Gluten"
+    ]
+  },
+  {
+    "name": "Chocolate Milkshake",
+    "category": "Treats",
+    "serving_size_g": 100,
+    "calories_kcal": 440,
+    "total_fat_g": 18,
+    "saturated_fat_g": 10,
+    "carbohydrate_g": 65,
+    "sugars_g": 55,
+    "protein_g": 9,
+    "salt_g": 0.1,
+    "allergens": [
+      "Milk Products",
+      "Gluten"
+    ]
+  }
+]
