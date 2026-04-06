@@ -1,9 +1,14 @@
 import os
 import json
 import re
+import time
 from pathlib import Path
+from datetime import timedelta
 from django.http import JsonResponse
 from django.shortcuts import render
+from django.contrib.auth.decorators import login_required, user_passes_test
+from django.db.models import Avg
+from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST
 
@@ -12,7 +17,7 @@ from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import StrOutputParser
 from langchain_core.runnables import RunnablePassthrough, RunnableLambda
 from langchain_text_splitters import RecursiveCharacterTextSplitter
-from langchain_community.vectorstores import FAISS
+from langchain_core.vectorstores import InMemoryVectorStore
 from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_openai import ChatOpenAI
 
@@ -39,7 +44,7 @@ def get_or_build_store(documents):
     global rag_store
     if rag_store is None:
         embeddings = get_embeddings()
-        rag_store = FAISS.from_documents(documents, embeddings)
+        rag_store = InMemoryVectorStore.from_documents(documents, embeddings)
     else:
         rag_store.add_documents(documents)
     return rag_store
@@ -218,12 +223,130 @@ def query_chat(request):
     if rag_store is None:
         return JsonResponse({"error": "Knowledge base not loaded yet."}, status=503)
 
+    start = time.perf_counter()
     try:
         chain = create_rag_chain(query=query)
         answer = chain.invoke(query)
+        elapsed_ms = int((time.perf_counter() - start) * 1000)
+        Conversation(
+            query=query,
+            answer=answer,
+            response_time_ms=elapsed_ms,
+            is_success=True,
+        ).save()
+        return JsonResponse({"query": query, "answer": answer})
     except Exception as e:
+        elapsed_ms = int((time.perf_counter() - start) * 1000)
+        Conversation(
+            query=query,
+            answer="",
+            response_time_ms=elapsed_ms,
+            is_success=False,
+            error_message=str(e),
+        ).save()
         return JsonResponse({"error": str(e)}, status=500)
 
-    Conversation(query=query, answer=answer).save()
 
-    return JsonResponse({"query": query, "answer": answer})
+# ── admin dashboard ──────────────────────────────────────────────────────────
+
+TIME_RANGES = {
+    "1h": timedelta(hours=1),
+    "24h": timedelta(hours=24),
+    "7d": timedelta(days=7),
+    "30d": timedelta(days=30),
+    "all": None,
+}
+
+staff_required = user_passes_test(lambda u: u.is_staff, login_url="/admin/login/")
+
+
+def _filtered_qs(time_range):
+    qs = Conversation.objects.all()
+    delta = TIME_RANGES.get(time_range)
+    if delta:
+        qs = qs.filter(created_at__gte=timezone.now() - delta)
+    return qs
+
+
+@login_required(login_url="/admin/login/")
+@staff_required
+def dashboard(request):
+    time_range = request.GET.get("range", "24h")
+    qs = _filtered_qs(time_range)
+
+    total_queries = qs.count()
+    failed_queries = qs.filter(is_success=False).count()
+    failure_rate = (failed_queries / total_queries * 100) if total_queries else 0
+    avg_response_time = qs.filter(
+        response_time_ms__isnull=False
+    ).aggregate(avg=Avg("response_time_ms"))["avg"] or 0
+
+    queries_today = Conversation.objects.filter(
+        created_at__date=timezone.now().date()
+    ).count()
+
+    return render(request, "chat/dashboard.html", {
+        "total_queries": total_queries,
+        "failed_queries": failed_queries,
+        "failure_rate": round(failure_rate, 1),
+        "avg_response_time": round(avg_response_time),
+        "queries_today": queries_today,
+        "current_range": time_range,
+        "time_ranges": list(TIME_RANGES.keys()),
+    })
+
+
+@login_required(login_url="/admin/login/")
+@staff_required
+def dashboard_api_logs(request):
+    time_range = request.GET.get("range", "24h")
+    page = int(request.GET.get("page", 1))
+    per_page = 20
+
+    qs = _filtered_qs(time_range).order_by("-created_at")
+    total = qs.count()
+    start = (page - 1) * per_page
+    logs = qs[start:start + per_page]
+
+    return JsonResponse({
+        "logs": [
+            {
+                "id": c.id,
+                "query": c.query[:150],
+                "answer": c.answer[:150],
+                "created_at": c.created_at.isoformat(),
+                "response_time_ms": c.response_time_ms,
+                "is_success": c.is_success,
+                "error_message": c.error_message or "",
+            }
+            for c in logs
+        ],
+        "total": total,
+        "page": page,
+        "per_page": per_page,
+        "total_pages": (total + per_page - 1) // per_page if total else 1,
+    })
+
+
+@login_required(login_url="/admin/login/")
+@staff_required
+def dashboard_api_chart(request):
+    time_range = request.GET.get("range", "24h")
+
+    qs = _filtered_qs(time_range).filter(
+        response_time_ms__isnull=False
+    ).order_by("-created_at")
+
+    entries = list(qs[:50].values_list("created_at", "response_time_ms", "is_success"))
+    entries.reverse()
+
+    return JsonResponse({
+        "data": [
+            {
+                "timestamp": ts.isoformat(),
+                "response_time_ms": rt,
+                "is_success": ok,
+            }
+            for ts, rt, ok in entries
+        ]
+    })

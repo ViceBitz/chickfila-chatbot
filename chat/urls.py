@@ -4,4 +4,6 @@ from . import views
 urlpatterns = [
     path('ingest/', views.ingest_documents, name='rag_ingest'),
     path('query/', views.query_chat, name='rag_query'),
+    path('dashboard/logs/', views.dashboard_api_logs, name='dashboard_logs'),
+    path('dashboard/chart/', views.dashboard_api_chart, name='dashboard_chart'),
 ]
