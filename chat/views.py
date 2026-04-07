@@ -78,7 +78,10 @@ def build_documents():
                 text += f" Calories: {calories}."
             if url and "chick-fil-a.com/menu" in url:
                 text += f" Details: {url}."
-            docs.append(Document(page_content=text, metadata={"topic": "menu"}))
+            metadata = {"topic": "Menu", "title": name}
+            if url:
+                metadata["url"] = url
+            docs.append(Document(page_content=text, metadata=metadata))
 
         for loc in data.get("locations", []):
             name = loc.get("name", "")
@@ -107,7 +110,10 @@ def build_documents():
                 text += f" Phone: {phone}."
             if hours_str:
                 text += f" Hours: {hours_str}."
-            docs.append(Document(page_content=text, metadata={"topic": "locations"}))
+            metadata = {"topic": "Location", "title": name}
+            if addr.get("city"):
+                metadata["city"] = addr.get("city")
+            docs.append(Document(page_content=text, metadata=metadata))
 
     if NUTRITION_FILE.exists():
         nutrition = json.loads(NUTRITION_FILE.read_text(encoding='utf-8'))
@@ -128,7 +134,7 @@ def build_documents():
                 f" Salt: {item.get('salt_g', '?')}g."
                 f" Allergens: {allergens}."
             )
-            docs.append(Document(page_content=text, metadata={"topic": "nutrition"}))
+            docs.append(Document(page_content=text, metadata={"topic": "Nutrition", "title": name}))
 
     return docs
 
@@ -207,7 +213,67 @@ def search_locations(query: str, max_results: int = 10) -> str:
     return "\n".join(lines)
 
 
-# ── prompt & chain ────────────────────────────────────────────────────────────
+def search_locations_with_sources(query: str, max_results: int = 10) -> tuple:
+    """
+    Keyword search through raw location data.
+    Returns tuple of (formatted_text, matched_locations) for source extraction.
+    """
+    tokens = set(re.findall(r"[a-z]+", query.lower()))
+    stop = {"the", "a", "an", "in", "near", "around", "of", "is", "are",
+            "where", "what", "any", "some", "chick", "fil", "chickfila", "location",
+            "locations", "restaurant", "restaurants"}
+    tokens -= stop
+
+    scored = []
+    for loc in location_data:
+        addr = loc.get("address") or {}
+        haystack = " ".join(filter(None, [
+            loc.get("name", ""),
+            addr.get("street", ""),
+            addr.get("city", ""),
+            addr.get("state", ""),
+            addr.get("zip", ""),
+        ])).lower()
+
+        score = sum(1 for t in tokens if t in haystack)
+        if score > 0:
+            scored.append((score, loc))
+
+    scored.sort(key=lambda x: x[0], reverse=True)
+    top = [loc for _, loc in scored[:max_results]]
+
+    if not top:
+        return "No matching Chick-fil-A locations found for this query.", []
+
+    lines = []
+    for loc in top:
+        addr = loc.get("address") or {}
+        address_str = ", ".join(filter(None, [
+            addr.get("street"), addr.get("city"),
+            addr.get("state"), addr.get("zip"),
+        ]))
+        hours_parts = []
+        for h in loc.get("hours") or []:
+            days = h.get("day_of_week", [])
+            if isinstance(days, list):
+                days = "/".join(days)
+            opens = h.get("opens", "")
+            if opens.lower() == "closed":
+                hours_parts.append(f"{days}: Closed")
+            else:
+                hours_parts.append(f"{days}: {opens}–{h.get('closes', '')}")
+
+        line = f"- {loc['name']}: {address_str}"
+        if loc.get("phone"):
+            line += f" | {loc['phone']}"
+        if hours_parts:
+            line += f" | Hours: {'; '.join(hours_parts)}"
+        lines.append(line)
+
+    return "\n".join(lines), top
+
+
+
 
 def _is_location_query(query: str) -> bool:
     tokens = set(re.findall(r"[a-z]+", query.lower()))
@@ -236,6 +302,21 @@ def _format_docs(docs):
     return "\n\n".join(d.page_content for d in docs)
 
 
+def _extract_sources(docs):
+    sources = []
+    for i, doc in enumerate(docs, 1):
+        title = doc.metadata.get("title") or doc.metadata.get("topic", "Source")
+        source = {
+            "index": i,
+            "content": doc.page_content[:200],
+            "topic": title,
+        }
+        if doc.metadata.get("url"):
+            source["url"] = doc.metadata["url"]
+        sources.append(source)
+    return sources
+
+
 def create_rag_chain(query: str):
     if rag_store is None:
         raise ValueError("No knowledge base loaded yet.")
@@ -255,6 +336,51 @@ def create_rag_chain(query: str):
         | llm
         | StrOutputParser()
     )
+
+
+def create_rag_chain_with_sources(query: str):
+    """Create RAG chain that returns both answer and source documents for all query types."""
+    if rag_store is None:
+        raise ValueError("No knowledge base loaded yet.")
+
+    llm = ChatOpenAI(model="gpt-4o-mini", temperature=0.0)
+    location_query = _is_location_query(query)
+
+    if location_query:
+        context, matched_locations = search_locations_with_sources(query)
+        
+        prompt = _build_prompt(location_query)
+        answer = (prompt | llm | StrOutputParser()).invoke({
+            "context": context,
+            "question": query
+        })
+        
+        sources = []
+        for loc in matched_locations:
+            source = {
+                "topic": loc.get("name", "Unknown Location"),
+                "content": f"{loc.get('address', {}).get('city', '')} - {loc.get('phone', '')}"[:100],
+            }
+            if loc.get("url"):
+                source["url"] = loc.get("url")
+            sources.append(source)
+        
+        return {"answer": answer, "sources": sources}
+    else:
+        retriever = rag_store.as_retriever(search_kwargs={"k": 6})
+        
+        def get_answer_with_sources(q):
+            docs = retriever.invoke(q)
+            context = _format_docs(docs)
+            prompt = _build_prompt(location_query)
+            answer = (prompt | llm | StrOutputParser()).invoke({
+                "context": context,
+                "question": q
+            })
+            sources = _extract_sources(docs)
+            return {"answer": answer, "sources": sources}
+        
+        return get_answer_with_sources(query)
 
 
 def interface(request):
@@ -312,8 +438,9 @@ def query_chat(request):
 
     start = time.perf_counter()
     try:
-        chain = create_rag_chain(query=query)
-        answer = chain.invoke(query)
+        result = create_rag_chain_with_sources(query=query)
+        answer = result.get("answer", "")
+        sources = result.get("sources", [])
         elapsed_ms = int((time.perf_counter() - start) * 1000)
         Conversation(
             query=query,
@@ -321,7 +448,11 @@ def query_chat(request):
             response_time_ms=elapsed_ms,
             is_success=True,
         ).save()
-        return JsonResponse({"query": query, "answer": answer})
+        return JsonResponse({
+            "query": query,
+            "answer": answer,
+            "sources": sources
+        })
     except Exception as e:
         elapsed_ms = int((time.perf_counter() - start) * 1000)
         Conversation(
@@ -437,6 +568,8 @@ def dashboard_api_chart(request):
             for ts, rt, ok in entries
         ]
     })
+
+
 
 
 @csrf_exempt
