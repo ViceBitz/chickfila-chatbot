@@ -59,7 +59,7 @@ def main():
         raw = raw.rsplit("```", 1)[0]
 
     items = json.loads(raw)
-    OUT_FILE.write_text(json.dumps(items, indent=2, ensure_ascii=False))
+    OUT_FILE.write_text(json.dumps(items, indent=2, ensure_ascii=False), encoding='utf-8')
     print(f"Saved {len(items)} items to {OUT_FILE}")
 
 
