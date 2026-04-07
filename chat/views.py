@@ -93,6 +93,20 @@ def build_documents():
                 metadata["url"] = url
             docs.append(Document(page_content=text, metadata=metadata))
 
+        # Build category summary documents so broad queries like
+        # "what salads do you have" retrieve a single doc listing all items.
+        category_items: dict[str, list[str]] = {}
+        for item in data.get("menu", []):
+            cat = item.get("category") or ""
+            if cat:
+                category_items.setdefault(cat, []).append(item.get("name", ""))
+        for cat, names in category_items.items():
+            # Deduplicate while preserving order
+            seen = set()
+            unique = [n for n in names if not (n in seen or seen.add(n))]
+            text = f"Chick-fil-A {cat} menu items: {', '.join(unique)}."
+            docs.append(Document(page_content=text, metadata={"topic": "Menu", "title": f"{cat} (category)"}))
+
         for loc in data.get("locations", []):
             name = loc.get("name", "")
             phone = loc.get("phone") or ""

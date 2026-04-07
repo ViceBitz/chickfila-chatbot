@@ -1,0 +1,74 @@
+[
+  {
+    "id": "nutrition-01",
+    "topic": "nutrition",
+    "question": "How many calories are in the Cobb Salad w/ Nuggets?",
+    "expected_keywords": ["830"]
+  },
+  {
+    "id": "nutrition-02",
+    "topic": "nutrition",
+    "question": "How many calories are in the Chick-fil-A Chicken Sandwich?",
+    "expected_keywords": ["420"]
+  },
+  {
+    "id": "nutrition-03",
+    "topic": "nutrition",
+    "question": "How much protein is in the Grilled Chicken Sandwich?",
+    "expected_keywords": ["28"]
+  },
+  {
+    "id": "nutrition-04",
+    "topic": "nutrition",
+    "question": "How many calories are in Waffle Potato Fries (medium)?",
+    "expected_keywords": ["420"]
+  },
+  {
+    "id": "nutrition-05",
+    "topic": "nutrition",
+    "question": "How many calories are in a Frosted Lemonade?",
+    "expected_keywords": ["350"]
+  },
+  {
+    "id": "menu-01",
+    "topic": "menu",
+    "question": "Does Chick-fil-A serve breakfast?",
+    "expected_keywords": ["breakfast"]
+  },
+  {
+    "id": "menu-02",
+    "topic": "menu",
+    "question": "What salads does Chick-fil-A offer?",
+    "expected_keywords": ["cobb", "market", "spicy southwest"]
+  },
+  {
+    "id": "menu-03",
+    "topic": "menu",
+    "question": "What dipping sauces does Chick-fil-A have?",
+    "expected_keywords": ["sauce"]
+  },
+  {
+    "id": "menu-04",
+    "topic": "menu",
+    "question": "Does Chick-fil-A have a spicy chicken sandwich?",
+    "expected_keywords": ["spicy"]
+  },
+  {
+    "id": "location-01",
+    "topic": "location",
+    "question": "Are there any Chick-fil-A locations in Atlanta?",
+    "expected_keywords": ["atlanta"]
+  },
+  {
+    "id": "location-02",
+    "topic": "location",
+    "question": "What are the hours for Chick-fil-A?",
+    "expected_keywords": ["monday", "saturday", "sunday"]
+  },
+  {
+    "id": "location-03",
+    "topic": "location",
+    "question": "Is there a Chick-fil-A near Georgia Tech?",
+    "expected_keywords": ["atlanta", "ga"]
+  }
+]
