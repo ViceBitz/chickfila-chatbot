@@ -70,12 +70,22 @@ def build_documents():
             category = item.get("category") or ""
             all_cats = ", ".join(item.get("all_categories") or [])
             url = item.get("url") or ""
-            calories = item.get("calories")
+            nutrition = item.get("nutrition") or {}
+            calories = nutrition.get("Calories") or item.get("calories")
+            serving_size = nutrition.get("Serving Size")
             text = f"Menu item: {name}. Category: {category}."
             if all_cats and all_cats != category:
                 text += f" Also in: {all_cats}."
             if calories:
-                text += f" Calories: {calories}."
+                serving_note = f" (per {serving_size} serving)" if serving_size else ""
+                text += f" Calories: {calories}{serving_note}."
+            if nutrition:
+                parts = []
+                for key in ("Fat (g)", "Sat. Fat (g)", "Cholesterol (mg)", "Sodium (mg)", "Carbohydrates (g)", "Fiber (g)", "Sugar (g)", "Protein (g)"):
+                    if key in nutrition:
+                        parts.append(f"{key}: {nutrition[key]}")
+                if parts:
+                    text += " Nutrition: " + ", ".join(parts) + "."
             if url and "chick-fil-a.com/menu" in url:
                 text += f" Details: {url}."
             metadata = {"topic": "Menu", "title": name}
@@ -120,12 +130,12 @@ def build_documents():
         for item in nutrition:
             name = item.get("name", "")
             category = item.get("category", "")
+            serving = item.get("serving_size_g", "?")
             allergens = ", ".join(item.get("allergens", [])) or "None listed"
             text = (
-                f"Nutrition facts for {name}."
+                f"Nutrition facts for {name} (per {serving}g serving)."
                 f" Category: {category}."
-                f" Serving size: {item.get('serving_size_g', '?')}g."
-                f" Calories: {item.get('calories_kcal', '?')} kcal."
+                f" Calories: {item.get('calories_kcal', '?')} kcal per {serving}g."
                 f" Total fat: {item.get('total_fat_g', '?')}g."
                 f" Saturated fat: {item.get('saturated_fat_g', '?')}g."
                 f" Carbohydrates: {item.get('carbohydrate_g', '?')}g."
@@ -133,6 +143,7 @@ def build_documents():
                 f" Protein: {item.get('protein_g', '?')}g."
                 f" Salt: {item.get('salt_g', '?')}g."
                 f" Allergens: {allergens}."
+                f" Note: these figures are per {serving}g serving, not per whole meal."
             )
             docs.append(Document(page_content=text, metadata={"topic": "Nutrition", "title": name}))
 
@@ -290,6 +301,9 @@ def _build_prompt(location_query: bool = False):
             "You are a helpful Chick-fil-A assistant."
             + hint
             + " Use the context below to answer the user's question. "
+            "When answering nutrition questions, always state the serving size the figures apply to. "
+            "Never present per-100g figures as whole-meal calories. "
+            "If you only have per-serving data and the user asks about a whole meal, say so clearly. "
             "Only say you don't have information if the context is completely unrelated "
             "to the question.\n\n"
             "Context:\n{context}"
