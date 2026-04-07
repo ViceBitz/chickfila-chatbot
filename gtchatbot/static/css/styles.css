@@ -106,6 +106,38 @@ header p {
   font-style: italic;
 }
 
+.sources {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid #e0e0e0;
+  font-size: 0.85rem;
+  color: #666;
+}
+
+.sources strong {
+  color: #1a1a1a;
+  display: block;
+  margin-bottom: 6px;
+}
+
+.sources ul {
+  list-style: none;
+  padding-left: 0;
+}
+
+.sources li {
+  margin-bottom: 6px;
+}
+
+.sources a {
+  color: #E4002B;
+  text-decoration: none;
+}
+
+.sources a:hover {
+  text-decoration: underline;
+}
+
 .timestamp {
   font-size: .68rem;
   color: #999;

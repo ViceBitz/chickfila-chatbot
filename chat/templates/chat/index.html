@@ -32,7 +32,7 @@
       return new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
     }
 
-    function appendMessage(role, text, loading = false) {
+    function appendMessage(role, text, loading = false, sources = []) {
       const welcome = messagesEl.querySelector(".welcome")
       if (welcome) welcome.remove()
 
@@ -41,7 +41,31 @@
 
       const bubble = document.createElement("div")
       bubble.className = "bubble" + (loading ? " loading" : "")
-      bubble.textContent = text
+      
+      if (loading) {
+        bubble.textContent = text
+      } else {
+        bubble.innerHTML = `<p>${text}</p>`
+        
+        // Add sources if available
+        if (sources && sources.length > 0) {
+          console.log("Adding sources:", sources)  // Debug log
+          const sourcesDiv = document.createElement("div")
+          sourcesDiv.className = "sources"
+          sourcesDiv.innerHTML = "<strong>📄 Sources:</strong><ul>"
+          
+          sources.forEach((source) => {
+            const topic = source.topic || source.title || "Unknown"
+            const url = source.url ? `<a href="${source.url}" target="_blank">${topic}</a>` : topic
+            sourcesDiv.innerHTML += `<li>${url}</li>`
+          })
+          
+          sourcesDiv.innerHTML += "</ul>"
+          bubble.appendChild(sourcesDiv)
+        } else {
+          console.log("No sources to display")  // Debug log
+        }
+      }
 
       const ts = document.createElement("span")
       ts.className = "timestamp"
@@ -75,8 +99,13 @@
         const data = await res.json()
 
         if (res.ok) {
-          thinkingBubble.textContent = data.answer
+          console.log("Response data:", data)  // Debug log
+          // Remove the loading bubble
           thinkingBubble.classList.remove("loading")
+          thinkingBubble.parentElement.remove()
+          
+          // Add the answer with sources
+          appendMessage("bot", data.answer, false, data.sources || [])
         } else {
           thinkingBubble.textContent = data.error || "Something went wrong. Please try again later."
           thinkingBubble.classList.remove("loading")
