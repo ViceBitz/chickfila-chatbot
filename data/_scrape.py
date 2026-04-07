@@ -17,6 +17,14 @@ from pathlib import Path
 import httpx
 from playwright.async_api import async_playwright
 
+from data.cleaners import (
+    normalize_address,
+    normalize_hours_entry,
+    normalize_integer,
+    normalize_list_of_text,
+    normalize_text,
+)
+
 OUT_FILE = Path(__file__).parent / "chickfila.json"
 BASE     = "https://www.chick-fil-a.com"
 API      = f"{BASE}/wp-json/wp/v2"
@@ -76,15 +84,43 @@ def extract_location_ld(html: str) -> dict | None:
 
 
 def parse_hours(spec: list) -> list[dict]:
-    return [
-        {
-            "day_of_week": h.get("dayOfWeek", ""),
-            "opens":  h.get("opens", ""),
-            "closes": h.get("closes", ""),
-        }
-        for h in (spec or [])
-        if isinstance(h, dict)
-    ]
+    hours = []
+    for h in (spec or []):
+        if not isinstance(h, dict):
+            continue
+        hours.append(normalize_hours_entry(h))
+    return hours
+
+
+def normalize_menu_item(item: dict) -> dict:
+    if not isinstance(item, dict):
+        return {}
+
+    all_categories = normalize_list_of_text(item.get("all_categories") or item.get("menu_taxonomy") or [])
+    category = normalize_text(item.get("category") or (all_categories[0] if all_categories else ""))
+
+    return {
+        "name": normalize_text(item.get("name")),
+        "slug": normalize_text(item.get("slug")),
+        "category": category,
+        "all_categories": all_categories,
+        "calories": normalize_integer(item.get("calories")),
+        "url": normalize_text(item.get("url")),
+        "image_url": normalize_text(item.get("image_url")),
+    }
+
+
+def normalize_location(loc: dict) -> dict:
+    if not isinstance(loc, dict):
+        loc = {}
+    return {
+        "name": normalize_text(loc.get("name")),
+        "url": normalize_text(loc.get("url")),
+        "phone": normalize_text(loc.get("phone")),
+        "image_url": normalize_text(loc.get("image_url")),
+        "address": normalize_address(loc.get("address") or {}),
+        "hours": [normalize_hours_entry(h) for h in (loc.get("hours") or []) if isinstance(h, dict)],
+    }
 
 
 # calorie scraping via Playwright
@@ -205,7 +241,7 @@ async def fetch_menu(client: httpx.AsyncClient) -> list[dict]:
             "image_url":      media_map.get(item.get("featured_media", 0)),
         })
 
-    return menu
+    return [normalize_menu_item(item) for item in menu]
 
 
 # locations
@@ -221,9 +257,9 @@ name: str,
             r = await client.get(loc_link, headers={**HEADERS, "Accept": "text/html"})
             ld = extract_location_ld(r.text)
             if not ld:
-                return {"name": name, "url": loc_link}
+                return normalize_location({"name": name, "url": loc_link})
             addr = ld.get("address", {})
-            return {
+            return normalize_location({
                 "name":      ld.get("name", name),
                 "url":       loc_link,
                 "phone":     ld.get("telephone"),
@@ -236,9 +272,9 @@ name: str,
                     "country": addr.get("addressCountry", "US"),
                 },
                 "hours": parse_hours(ld.get("openingHoursSpecification")),
-            }
+            })
         except Exception:
-            return {"name": name, "url": loc_link}
+            return normalize_location({"name": name, "url": loc_link})
 
 
 async def fetch_locations(client: httpx.AsyncClient) -> list[dict]:

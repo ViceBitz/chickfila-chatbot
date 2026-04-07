@@ -15,12 +15,56 @@ from dotenv import load_dotenv
 from openai import OpenAI
 from pypdf import PdfReader
 
+from data.cleaners import (
+    normalize_integer,
+    normalize_list_of_text,
+    normalize_text,
+)
+
 load_dotenv(Path(__file__).parent.parent / ".env")
 
 PDF_PATH = Path(__file__).parent / "nutrition.pdf"
 OUT_FILE = Path(__file__).parent / "nutrition-facts.json"
 
 client = OpenAI()
+
+
+def normalize_nutrition_item(item: dict) -> dict | None:
+    if not isinstance(item, dict):
+        return None
+
+    name = normalize_text(item.get("name"))
+    category = normalize_text(item.get("category"))
+    if not name or not category:
+        return None
+
+    serving_size_g = normalize_integer(item.get("serving_size_g"))
+    calories_kcal = normalize_integer(item.get("calories_kcal"))
+    if serving_size_g is None or calories_kcal is None:
+        return None
+
+    nutrients = {
+        "total_fat_g": normalize_integer(item.get("total_fat_g")),
+        "saturated_fat_g": normalize_integer(item.get("saturated_fat_g")),
+        "carbohydrate_g": normalize_integer(item.get("carbohydrate_g")),
+        "sugars_g": normalize_integer(item.get("sugars_g")),
+        "protein_g": normalize_integer(item.get("protein_g")),
+        "salt_g": normalize_integer(item.get("salt_g")),
+    }
+
+    return {
+        "name": name,
+        "category": category,
+        "serving_size_g": serving_size_g,
+        "calories_kcal": calories_kcal,
+        "total_fat_g": nutrients["total_fat_g"],
+        "saturated_fat_g": nutrients["saturated_fat_g"],
+        "carbohydrate_g": nutrients["carbohydrate_g"],
+        "sugars_g": nutrients["sugars_g"],
+        "protein_g": nutrients["protein_g"],
+        "salt_g": nutrients["salt_g"],
+        "allergens": normalize_list_of_text(item.get("allergens")),
+    }
 
 
 def main():
@@ -59,8 +103,20 @@ def main():
         raw = raw.rsplit("```", 1)[0]
 
     items = json.loads(raw)
-    OUT_FILE.write_text(json.dumps(items, indent=2, ensure_ascii=False))
-    print(f"Saved {len(items)} items to {OUT_FILE}")
+    normalized_items = []
+    skipped = 0
+    for item in items:
+        normalized = normalize_nutrition_item(item)
+        if normalized is None:
+            skipped += 1
+            continue
+        normalized_items.append(normalized)
+
+    OUT_FILE.write_text(json.dumps(normalized_items, indent=2, ensure_ascii=False))
+    print(
+        f"Saved {len(normalized_items)} items to {OUT_FILE}"
+        + (f" ({skipped} malformed items skipped)" if skipped else "")
+    )
 
 
 if __name__ == "__main__":
