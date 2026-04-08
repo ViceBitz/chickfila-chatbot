@@ -310,11 +310,17 @@ def _build_prompt(location_query: bool = False):
         " Mention specific names, addresses, phone numbers, and hours when available."
         if location_query else ""
     )
+    source_instruction = (
+        "When answering, always start with 'Based on the Chick-fil-A website/locations data, ...' to reference your source."
+        if location_query else
+        "When answering, always start with 'Based on the Chick-fil-A menu/nutrition data, ...' to reference your source."
+    )
     return ChatPromptTemplate.from_messages([
         ("system", (
             "You are a helpful Chick-fil-A assistant."
             + hint
             + " Use the context below to answer the user's question. "
+            + source_instruction + " "
             "When answering nutrition questions, always state the serving size the figures apply to. "
             "Never present per-100g figures as whole-meal calories. "
             "If you only have per-serving data and the user asks about a whole meal, say so clearly. "
