@@ -38,14 +38,13 @@ COLLECTION_NAME = "chickfila_docs"
 def _get_connection_string():
     """Build the PostgreSQL connection string from DATABASE_URL or Django settings."""
     db_url = os.getenv("DATABASE_URL")
-    if db_url:
-        # SQLAlchemy needs postgresql+psycopg2:// as the scheme
-        if db_url.startswith("postgres://"):
-            db_url = "postgresql+psycopg2://" + db_url[len("postgres://"):]
-        elif db_url.startswith("postgresql://"):
-            db_url = "postgresql+psycopg2://" + db_url[len("postgresql://"):]
-        return db_url
-    return None
+    if not db_url:
+        return None
+    # Normalize to postgresql+psycopg2:// which SQLAlchemy can parse
+    from sqlalchemy.engine.url import make_url
+    parsed = make_url(db_url.replace("postgres://", "postgresql://", 1))
+    parsed = parsed.set(drivername="postgresql+psycopg2")
+    return parsed.render_as_string(hide_password=False)
 
 LOCATION_KEYWORDS = {
     "location", "locations", "address", "near", "nearby", "closest", "closest",
