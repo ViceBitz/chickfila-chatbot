@@ -39,9 +39,12 @@ def _get_connection_string():
     """Build the PostgreSQL connection string from DATABASE_URL or Django settings."""
     db_url = os.getenv("DATABASE_URL")
     if db_url:
-        # PGVector needs postgresql://, not postgres://
-        return db_url.replace("postgres://", "postgresql://", 1)
-    # Fallback for local dev with SQLite — use in-memory store
+        # SQLAlchemy needs postgresql+psycopg2:// as the scheme
+        if db_url.startswith("postgres://"):
+            db_url = "postgresql+psycopg2://" + db_url[len("postgres://"):]
+        elif db_url.startswith("postgresql://"):
+            db_url = "postgresql+psycopg2://" + db_url[len("postgresql://"):]
+        return db_url
     return None
 
 LOCATION_KEYWORDS = {
