@@ -17,19 +17,15 @@ if db_url:
     print('pgvector extension enabled')
 "
 
-# Create superuser from env vars (only if it doesn't exist yet)
+# Create superuser (only if it doesn't exist yet)
 python manage.py shell -c "
 from django.contrib.auth import get_user_model
 User = get_user_model()
-import os
-username = os.environ.get('DJANGO_SUPERUSER_USERNAME', 'admin')
-email = os.environ.get('DJANGO_SUPERUSER_EMAIL', 'admin@example.com')
-password = os.environ.get('DJANGO_SUPERUSER_PASSWORD')
-if password and not User.objects.filter(username=username).exists():
-    User.objects.create_superuser(username, email, password)
-    print(f'Superuser {username} created')
+if not User.objects.filter(username='admin').exists():
+    User.objects.create_superuser('admin', 'admin@example.com', 'admin')
+    print('Superuser admin created')
 else:
-    print('Superuser already exists or no password set')
+    print('Superuser admin already exists')
 "
 
 # Start gunicorn
