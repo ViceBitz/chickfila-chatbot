@@ -20,8 +20,7 @@ from langchain_core.output_parsers import StrOutputParser
 from langchain_core.runnables import RunnablePassthrough, RunnableLambda
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_core.vectorstores import InMemoryVectorStore
-from langchain_huggingface import HuggingFaceEmbeddings
-from langchain_openai import ChatOpenAI
+from langchain_openai import ChatOpenAI, OpenAIEmbeddings
 
 from .models import Conversation
 
@@ -30,7 +29,7 @@ location_data: list[dict] = []   # raw location records for keyword search
 _scrape_state: dict = {"status": "idle", "started_at": None, "finished_at": None, "message": ""}
 _pdf_state: dict = {"status": "idle", "started_at": None, "finished_at": None, "message": ""}
 
-EMBEDDING_MODEL = os.getenv("EMBEDDING_MODEL", "sentence-transformers/all-MiniLM-L6-v2")
+EMBEDDING_MODEL = os.getenv("EMBEDDING_MODEL", "text-embedding-3-small")
 DATA_FILE = Path(__file__).resolve().parent.parent / "data" / "chickfila.json"
 NUTRITION_FILE = Path(__file__).resolve().parent.parent / "data" / "nutrition-facts.json"
 
@@ -42,7 +41,7 @@ LOCATION_KEYWORDS = {
 
 
 def get_embeddings():
-    return HuggingFaceEmbeddings(model_name=EMBEDDING_MODEL)
+    return OpenAIEmbeddings(model=EMBEDDING_MODEL)
 
 
 def get_or_build_store(documents):
