@@ -1,0 +1,96 @@
+{% extends "base.html" %}
+{% block title %}Chat History - Chick-fil-A Assistant{% endblock %}
+
+{% block content %}
+<div class="history-wrapper">
+  <h2 class="history-title">Chat History</h2>
+
+  {% if sessions %}
+    <div class="history-list">
+      {% for session in sessions %}
+        <div class="history-card" data-session-id="{{ session.id }}">
+          <div class="history-card-header">
+            <h3 class="history-card-title">{{ session.title }}</h3>
+            <div class="history-card-actions">
+              <a href="/?session={{ session.id }}" class="history-resume-btn">Resume</a>
+              <button class="history-delete-btn" data-id="{{ session.id }}">Delete</button>
+            </div>
+          </div>
+          <span class="history-card-date">{{ session.updated_at|date:"M d, Y g:i A" }}</span>
+          <div class="history-card-messages" id="messages-{{ session.id }}" style="display:none;"></div>
+          <button class="history-expand-btn" data-id="{{ session.id }}">View messages</button>
+        </div>
+      {% endfor %}
+    </div>
+  {% else %}
+    <div class="history-empty">
+      <p>No conversations yet. <a href="{% url 'interface' %}">Start chatting!</a></p>
+    </div>
+  {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+  document.querySelectorAll(".history-expand-btn").forEach(btn => {
+    btn.addEventListener("click", async function() {
+      const id = this.dataset.id;
+      const container = document.getElementById("messages-" + id);
+
+      if (container.style.display !== "none") {
+        container.style.display = "none";
+        this.textContent = "View messages";
+        return;
+      }
+
+      if (!container.dataset.loaded) {
+        container.innerHTML = '<p class="history-loading">Loading...</p>';
+        container.style.display = "block";
+        try {
+          const res = await fetch("/api/chat/sessions/" + id + "/");
+          const data = await res.json();
+          if (data.messages && data.messages.length) {
+            container.innerHTML = data.messages.map(m =>
+              '<div class="history-msg">' +
+                '<div class="history-msg-query"><strong>You:</strong> ' + escapeHtml(m.query) + '</div>' +
+                '<div class="history-msg-answer"><strong>Bot:</strong> ' + escapeHtml(m.answer) + '</div>' +
+              '</div>'
+            ).join("");
+          } else {
+            container.innerHTML = '<p class="history-loading">No messages in this session.</p>';
+          }
+          container.dataset.loaded = "1";
+        } catch {
+          container.innerHTML = '<p class="history-loading">Failed to load messages.</p>';
+        }
+      } else {
+        container.style.display = "block";
+      }
+      this.textContent = "Hide messages";
+    });
+  });
+
+  document.querySelectorAll(".history-delete-btn").forEach(btn => {
+    btn.addEventListener("click", async function() {
+      if (!confirm("Delete this conversation? This cannot be undone.")) return;
+      const id = this.dataset.id;
+      try {
+        const res = await fetch("/api/chat/sessions/" + id + "/", { method: "DELETE" });
+        if (res.ok) {
+          this.closest(".history-card").remove();
+          if (!document.querySelector(".history-card")) {
+            document.querySelector(".history-list").innerHTML =
+              '<div class="history-empty"><p>No conversations yet. <a href="/">Start chatting!</a></p></div>';
+          }
+        }
+      } catch {}
+    });
+  });
+
+  function escapeHtml(text) {
+    const div = document.createElement("div");
+    div.textContent = text;
+    return div.innerHTML;
+  }
+</script>
+{% endblock %}
