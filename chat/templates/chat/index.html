@@ -1,23 +1,40 @@
 {% extends "base.html" %}
 
 {% block content %}
-  <div class="chat-wrapper">
-    <div id="messages">
-      <div class="welcome">
-        <p>Welcome! I am your <strong>Chick-fil-A</strong> assistant.</p>
-        <p>Ask me about the menu, locations, hours, and more.</p>
+  <div class="chat-layout">
+    {% if user.is_authenticated %}
+    <aside class="chat-sidebar" id="chat-sidebar">
+      <div class="sidebar-header">
+        <h3>Conversations</h3>
+        <button class="sidebar-new-btn" id="new-chat-btn" title="New Chat">+</button>
       </div>
-    </div>
-  </div>
+      <div class="sidebar-list" id="sidebar-list">
+        <!-- populated by JS -->
+      </div>
+    </aside>
+    <button class="sidebar-toggle" id="sidebar-toggle" title="Toggle sidebar">&#9776;</button>
+    {% endif %}
 
-  <div class="input-area">
-    <div class="input-row">
-      <textarea id="user-input" rows="1" placeholder="Ask about the menu, locations, hours…"></textarea>
-      <button id="send" aria-label="Send">
-        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-          <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z" />
-        </svg>
-      </button>
+    <div class="chat-main">
+      <div class="chat-wrapper">
+        <div id="messages">
+          <div class="welcome">
+            <p>Welcome! I am your <strong>Chick-fil-A</strong> assistant.</p>
+            <p>Ask me about the menu, locations, hours, and more.</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="input-area">
+        <div class="input-row">
+          <textarea id="user-input" rows="1" placeholder="Ask about the menu, locations, hours…"></textarea>
+          <button id="send" aria-label="Send">
+            <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+              <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z" />
+            </svg>
+          </button>
+        </div>
+      </div>
     </div>
   </div>
 {% endblock %}
@@ -27,9 +44,118 @@
     const messagesEl = document.getElementById("messages")
     const inputEl = document.getElementById("user-input")
     const sendBtn = document.getElementById("send")
+    const isAuthenticated = {{ user.is_authenticated|yesno:"true,false" }}
+    let activeSessionId = {{ active_session_id|default:"null" }}
+    let chatSessions = []
+
+    // ── Sidebar ───────────────────────────────────────────────────────────
+    {% if user.is_authenticated %}
+    try { chatSessions = JSON.parse('{{ chat_sessions|escapejs }}') } catch {}
+
+    const sidebarEl = document.getElementById("sidebar-list")
+    const sidebarToggle = document.getElementById("sidebar-toggle")
+    const sidebar = document.getElementById("chat-sidebar")
+
+    sidebarToggle.addEventListener("click", () => {
+      sidebar.classList.toggle("open")
+    })
+
+    function renderSidebar() {
+      if (!sidebarEl) return
+      if (!chatSessions.length) {
+        sidebarEl.innerHTML = '<p class="sidebar-empty">No conversations yet</p>'
+        return
+      }
+      sidebarEl.innerHTML = chatSessions.map(s => `
+        <div class="sidebar-item ${s.id == activeSessionId ? 'active' : ''}" data-id="${s.id}">
+          <span class="sidebar-item-title">${escapeHtml(s.title)}</span>
+          <button class="sidebar-item-delete" data-id="${s.id}" title="Delete">&times;</button>
+        </div>
+      `).join("")
+
+      sidebarEl.querySelectorAll(".sidebar-item").forEach(el => {
+        el.addEventListener("click", (e) => {
+          if (e.target.classList.contains("sidebar-item-delete")) return
+          loadSession(parseInt(el.dataset.id))
+        })
+      })
+
+      sidebarEl.querySelectorAll(".sidebar-item-delete").forEach(btn => {
+        btn.addEventListener("click", async (e) => {
+          e.stopPropagation()
+          if (!confirm("Delete this conversation?")) return
+          const id = btn.dataset.id
+          try {
+            const res = await fetch("/api/chat/sessions/" + id + "/", { method: "DELETE" })
+            if (res.ok) {
+              chatSessions = chatSessions.filter(s => s.id != id)
+              if (activeSessionId == id) {
+                activeSessionId = null
+                clearMessages()
+              }
+              renderSidebar()
+            }
+          } catch {}
+        })
+      })
+    }
+
+    async function loadSession(id) {
+      activeSessionId = id
+      renderSidebar()
+      clearMessages()
+      try {
+        const res = await fetch("/api/chat/sessions/" + id + "/")
+        const data = await res.json()
+        if (data.messages) {
+          data.messages.forEach(m => {
+            appendMessage("user", m.query)
+            appendMessage("bot", m.answer)
+          })
+        }
+      } catch {}
+    }
+
+    async function createSession() {
+      try {
+        const res = await fetch("/api/chat/sessions/", { method: "POST" })
+        const data = await res.json()
+        activeSessionId = data.id
+        chatSessions.unshift({ id: data.id, title: data.title, updated_at: new Date().toISOString() })
+        renderSidebar()
+        clearMessages()
+      } catch {}
+    }
+
+    document.getElementById("new-chat-btn").addEventListener("click", createSession)
+
+    renderSidebar()
+
+    // If a session is active, load it
+    if (activeSessionId) {
+      loadSession(activeSessionId)
+    }
+    {% endif %}
+
+    // ── Chat logic ────────────────────────────────────────────────────────
 
     function now() {
       return new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+    }
+
+    function escapeHtml(text) {
+      const div = document.createElement("div")
+      div.textContent = text
+      return div.innerHTML
+    }
+
+    function clearMessages() {
+      messagesEl.innerHTML = `
+        <div class="welcome">
+          <p>Welcome! I am your <strong>Chick-fil-A</strong> assistant.</p>
+          <p>Ask me about the menu, locations, hours, and more.</p>
+        </div>
+      `
     }
 
     function appendMessage(role, text, loading = false, sources = []) {
@@ -41,29 +167,25 @@
 
       const bubble = document.createElement("div")
       bubble.className = "bubble" + (loading ? " loading" : "")
-      
+
       if (loading) {
         bubble.textContent = text
       } else {
-        bubble.innerHTML = `<p>${text}</p>`
-        
-        // Add sources if available
+        bubble.innerHTML = `<p>${escapeHtml(text)}</p>`
+
         if (sources && sources.length > 0) {
-          console.log("Adding sources:", sources)  // Debug log
           const sourcesDiv = document.createElement("div")
           sourcesDiv.className = "sources"
-          sourcesDiv.innerHTML = "<strong>📄 Sources:</strong><ul>"
-          
+          sourcesDiv.innerHTML = "<strong>Sources:</strong><ul>"
+
           sources.forEach((source) => {
             const topic = source.topic || source.title || "Unknown"
-            const url = source.url ? `<a href="${source.url}" target="_blank">${topic}</a>` : topic
+            const url = source.url ? `<a href="${escapeHtml(source.url)}" target="_blank">${escapeHtml(topic)}</a>` : escapeHtml(topic)
             sourcesDiv.innerHTML += `<li>${url}</li>`
           })
-          
+
           sourcesDiv.innerHTML += "</ul>"
           bubble.appendChild(sourcesDiv)
-        } else {
-          console.log("No sources to display")  // Debug log
         }
       }
 
@@ -86,26 +208,42 @@
       inputEl.style.height = "auto"
       sendBtn.disabled = true
 
+      // Auto-create session for logged-in users
+      if (isAuthenticated && !activeSessionId) {
+        try {
+          const res = await fetch("/api/chat/sessions/", { method: "POST" })
+          const data = await res.json()
+          activeSessionId = data.id
+          chatSessions.unshift({ id: data.id, title: data.title, updated_at: new Date().toISOString() })
+          renderSidebar()
+        } catch {}
+      }
+
       appendMessage("user", query)
       const thinkingBubble = appendMessage("bot", "Thinking…", true)
 
       try {
+        const body = { query }
+        if (activeSessionId) body.session_id = activeSessionId
+
         const res = await fetch("/api/chat/query/", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ query }),
+          body: JSON.stringify(body),
         })
 
         const data = await res.json()
 
         if (res.ok) {
-          console.log("Response data:", data)  // Debug log
-          // Remove the loading bubble
           thinkingBubble.classList.remove("loading")
           thinkingBubble.parentElement.remove()
-          
-          // Add the answer with sources
           appendMessage("bot", data.answer, false, data.sources || [])
+
+          // Update sidebar title if session was auto-titled
+          if (data.session_title && activeSessionId) {
+            const s = chatSessions.find(s => s.id == activeSessionId)
+            if (s) { s.title = data.session_title; renderSidebar() }
+          }
         } else {
           thinkingBubble.textContent = data.error || "Something went wrong. Please try again later."
           thinkingBubble.classList.remove("loading")
